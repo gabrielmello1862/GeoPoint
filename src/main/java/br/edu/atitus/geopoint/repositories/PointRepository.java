@@ -1,7 +1,6 @@
 package br.edu.atitus.geopoint.repositories;
 
 import br.edu.atitus.geopoint.entities.PointEntity;
-import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -13,27 +12,15 @@ import java.util.UUID;
 @Repository
 public class PointRepository {
 
+
     private final JdbcTemplate jdbcTemplate;
 
     public PointRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @PostConstruct
-    public void criarTabelaSeNaoExistir() {
-        String sql = """
-            CREATE TABLE IF NOT EXISTS points (
-                id UUID PRIMARY KEY,
-                name VARCHAR(255) NOT NULL UNIQUE,
-                description TEXT,
-                latitude NUMERIC(10, 7) NOT NULL,
-                longitude NUMERIC(10, 7) NOT NULL
-            )
-            """;
-        jdbcTemplate.execute(sql);
-    }
 
-    private final RowMapper<PointEntity> rowMapper = (rs, rowNum) -> {
+    private final RowMapper<PointEntity> pointMapper = (rs, rowNum) -> {
         PointEntity point = new PointEntity();
         point.setId(rs.getObject("id", UUID.class));
         point.setName(rs.getString("name"));
@@ -43,59 +30,42 @@ public class PointRepository {
         return point;
     };
 
-    public PointEntity save(PointEntity point) {
+    public void insert(PointEntity point) {
         String sql = "INSERT INTO points (id, name, description, latitude, longitude) VALUES (?, ?, ?, ?, ?)";
-        jdbcTemplate.update(sql,
-                point.getId(),
-                point.getName(),
-                point.getDescription(),
-                point.getLatitude(),
-                point.getLongitude());
-        return point;
+        jdbcTemplate.update(sql, point.getId(), point.getName(), point.getDescription(),
+                point.getLatitude(), point.getLongitude());
     }
 
     public List<PointEntity> findAll() {
-        String sql = "SELECT id, name, description, latitude, longitude FROM points ORDER BY name ASC";
-        return jdbcTemplate.query(sql, rowMapper);
+        String sql = "SELECT id, name, description, latitude, longitude FROM points ORDER BY name";
+        return jdbcTemplate.query(sql, pointMapper);
     }
 
     public Optional<PointEntity> findById(UUID id) {
         String sql = "SELECT id, name, description, latitude, longitude FROM points WHERE id = ?";
-        List<PointEntity> results = jdbcTemplate.query(sql, rowMapper, id);
-        return results.stream().findFirst();
+        return jdbcTemplate.query(sql, pointMapper, id).stream().findFirst();
     }
 
-    public PointEntity update(PointEntity point) {
+    public void update(PointEntity point) {
         String sql = "UPDATE points SET name = ?, description = ?, latitude = ?, longitude = ? WHERE id = ?";
-        jdbcTemplate.update(sql,
-                point.getName(),
-                point.getDescription(),
-                point.getLatitude(),
-                point.getLongitude(),
-                point.getId());
-        return point;
+        jdbcTemplate.update(sql, point.getName(), point.getDescription(),
+                point.getLatitude(), point.getLongitude(), point.getId());
     }
 
     public void deleteById(UUID id) {
-        String sql = "DELETE FROM points WHERE id = ?";
-        jdbcTemplate.update(sql, id);
-    }
-
-    public boolean existsById(UUID id) {
-        String sql = "SELECT COUNT(*) FROM points WHERE id = ?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
-        return count != null && count > 0;
+        jdbcTemplate.update("DELETE FROM points WHERE id = ?", id);
     }
 
     public boolean existsByName(String name) {
-        String sql = "SELECT COUNT(*) FROM points WHERE LOWER(name) = LOWER(?)";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name);
-        return count != null && count > 0;
+        Integer total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM points WHERE LOWER(name) = LOWER(?)", Integer.class, name);
+        return total != null && total > 0;
     }
 
     public boolean existsByNameAndIdNot(String name, UUID id) {
-        String sql = "SELECT COUNT(*) FROM points WHERE LOWER(name) = LOWER(?) AND id <> ?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name, id);
-        return count != null && count > 0;
+        Integer total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM points WHERE LOWER(name) = LOWER(?) AND id <> ?",
+                Integer.class, name, id);
+        return total != null && total > 0;
     }
 }

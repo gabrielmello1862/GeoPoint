@@ -10,6 +10,10 @@ public class PointEntity {
     private BigDecimal latitude;
     private BigDecimal longitude;
 
+
+
+
+    //get e set
     public UUID getId() {
         return id;
     }
@@ -21,7 +25,6 @@ public class PointEntity {
     public String getName() {
         return name;
     }
-
     public void setName(String name) {
         this.name = name;
     }
